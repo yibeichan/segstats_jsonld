@@ -48,6 +48,7 @@ from os.path import join,basename,splitext,isfile,dirname
 from socket import getfqdn
 import glob
 import pandas as pd
+import warnings
 
 import prov.model as prov
 import json
@@ -58,6 +59,7 @@ from rapidfuzz import fuzz
 
 from rdflib import Graph, RDF, URIRef, util, term,Namespace,Literal,BNode, XSD
 from rdflib.serializer import Serializer
+from rdflib.plugins.sparql import prepareQuery
 from segstats_jsonld.fsutils import read_stats, convert_stats_to_nidm, convert_csv_stats_to_nidm,\
     create_cde_graph
 
@@ -465,6 +467,35 @@ def add_seg_data(nidmdoc,header,subjid,fs_stats_entity_id, add_to_nidm=False, fo
                  for row in qres:
                     print('Found subject ID: %s in NIDM file (agent: %s)' %(subjid,row[0]))
                     participant_agent = row[0]
+
+            # When extending an existing NIDM file, link the segmentation software activity to the
+            # anatomical acquisition used to produce the stats (mirrors FSL workflow).
+            query_acq = prepareQuery(
+                """
+                PREFIX prov:  <http://www.w3.org/ns/prov#>
+                PREFIX nidm:  <http://purl.org/nidash/nidm#>
+                PREFIX sio:   <http://semanticscience.org/resource/>
+                PREFIX nfo:   <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
+                SELECT DISTINCT ?acqObj
+                WHERE {
+                    ?acqObj a nidm:AcquisitionObject ;
+                    prov:wasGeneratedBy/prov:qualifiedAssociation/prov:agent ?subject ;
+                    nidm:hadAcquisitionModality nidm:MagneticResonanceImaging ;
+                    nidm:hadImageUsageType nidm:Anatomical
+                }
+                """
+            )
+            res = list(nidmdoc.query(query_acq, initBindings={"subject": participant_agent}))
+            if not res:
+                warnings.warn(f"No T1-weighted AcquisitionObject found for subject {subjid}")
+                acq_obj = None
+            elif len(res) > 1:
+                raise RuntimeError(f"Expected exactly 1 AcquisitionObject, found {len(res)}")
+            else:
+                acq_obj = res[0].acqObj
+
+            if acq_obj:
+                nidmdoc.add((software_activity, Constants.PROV['used'], acq_obj))
 
     #create a blank node and qualified association with prov:Agent for participant
     association_bnode = BNode()
