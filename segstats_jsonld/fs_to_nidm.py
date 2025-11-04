@@ -739,7 +739,8 @@ def main():
 
                     if args.add_de is None:
                         # serialize cde graph
-                        g.serialize(destination=join(dirname(args.output_dir),"fs_cde.ttl"),format='turtle')
+                        output_path = dirname(args.output_dir) if args.output_dir else dirname(args.nidm_file)
+                        g.serialize(destination=join(output_path,"fs_cde.ttl"),format='turtle')
 
     # else if the user didn't set subject_dir on command line then they must have set a segmentation file directly
     elif args.segfile is not None:
