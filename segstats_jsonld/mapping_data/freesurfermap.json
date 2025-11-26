@@ -288,6 +288,12 @@
       "fsunit": "unitless",
       "hasUnit": "fs:defect-hole",
       "measureOf": "http://uri.interlex.org/base/ilx_0112559"
+    },
+    "sTIV": {
+      "datumType": "http://uri.interlex.org/base/ilx_0738276",
+      "fsunit": "mm^3",
+      "hasUnit": "mm^3",
+      "measureOf": "http://uri.interlex.org/base/ilx_0112559"
     }
   },
   "Structures": {
@@ -329,9 +335,21 @@
       ],
       "isAbout": null
     },
+    "BA1_exvivo.thresh": {
+      "fskey": [
+        "BA1_exvivo.thresh"
+      ],
+      "isAbout": null
+    },
     "BA2_exvivo": {
       "fskey": [
         "BA2_exvivo"
+      ],
+      "isAbout": null
+    },
+    "BA2_exvivo.thresh": {
+      "fskey": [
+        "BA2_exvivo.thresh"
       ],
       "isAbout": null
     },
@@ -341,9 +359,21 @@
       ],
       "isAbout": null
     },
+    "BA3a_exvivo.thresh": {
+      "fskey": [
+        "BA3a_exvivo.thresh"
+      ],
+      "isAbout": null
+    },
     "BA3b_exvivo": {
       "fskey": [
         "BA3b_exvivo"
+      ],
+      "isAbout": null
+    },
+    "BA3b_exvivo.thresh": {
+      "fskey": [
+        "BA3b_exvivo.thresh"
       ],
       "isAbout": null
     },
@@ -353,9 +383,21 @@
       ],
       "isAbout": null
     },
+    "BA44_exvivo.thresh": {
+      "fskey": [
+        "BA44_exvivo.thresh"
+      ],
+      "isAbout": null
+    },
     "BA45_exvivo": {
       "fskey": [
         "BA45_exvivo"
+      ],
+      "isAbout": null
+    },
+    "BA45_exvivo.thresh": {
+      "fskey": [
+        "BA45_exvivo.thresh"
       ],
       "isAbout": null
     },
@@ -365,15 +407,33 @@
       ],
       "isAbout": null
     },
+    "BA4a_exvivo.thresh": {
+      "fskey": [
+        "BA4a_exvivo.thresh"
+      ],
+      "isAbout": null
+    },
     "BA4p_exvivo": {
       "fskey": [
         "BA4p_exvivo"
       ],
       "isAbout": null
     },
+    "BA4p_exvivo.thresh": {
+      "fskey": [
+        "BA4p_exvivo.thresh"
+      ],
+      "isAbout": null
+    },
     "BA6_exvivo": {
       "fskey": [
         "BA6_exvivo"
+      ],
+      "isAbout": null
+    },
+    "BA6_exvivo.thresh": {
+      "fskey": [
+        "BA6_exvivo.thresh"
       ],
       "isAbout": null
     },
@@ -537,6 +597,60 @@
     "G_Ins_lg&S_cent_ins": {
       "fskey": [
         "G_Ins_lg&S_cent_ins"
+      ],
+      "isAbout": null
+    },
+    "G_Ins_lg_and_S_cent_ins": {
+      "fskey": [
+        "G_Ins_lg_and_S_cent_ins"
+      ],
+      "isAbout": null
+    },
+    "G_and_S_cingul-Ant": {
+      "fskey": [
+        "G_and_S_cingul-Ant"
+      ],
+      "isAbout": null
+    },
+    "G_and_S_cingul-Mid-Ant": {
+      "fskey": [
+        "G_and_S_cingul-Mid-Ant"
+      ],
+      "isAbout": null
+    },
+    "G_and_S_cingul-Mid-Post": {
+      "fskey": [
+        "G_and_S_cingul-Mid-Post"
+      ],
+      "isAbout": null
+    },
+    "G_and_S_frontomargin": {
+      "fskey": [
+        "G_and_S_frontomargin"
+      ],
+      "isAbout": null
+    },
+    "G_and_S_occipital_inf": {
+      "fskey": [
+        "G_and_S_occipital_inf"
+      ],
+      "isAbout": null
+    },
+    "G_and_S_paracentral": {
+      "fskey": [
+        "G_and_S_paracentral"
+      ],
+      "isAbout": null
+    },
+    "G_and_S_subcentral": {
+      "fskey": [
+        "G_and_S_subcentral"
+      ],
+      "isAbout": null
+    },
+    "G_and_S_transv_frontopol": {
+      "fskey": [
+        "G_and_S_transv_frontopol"
       ],
       "isAbout": null
     },
@@ -759,6 +873,12 @@
       ],
       "isAbout": null
     },
+    "MT_exvivo.thresh": {
+      "fskey": [
+        "MT_exvivo.thresh"
+      ],
+      "isAbout": null
+    },
     "Mask": {
       "fskey": [
         "Mask"
@@ -881,6 +1001,12 @@
       ],
       "isAbout": null
     },
+    "S_intrapariet_and_P_trans": {
+      "fskey": [
+        "S_intrapariet_and_P_trans"
+      ],
+      "isAbout": null
+    },
     "S_oc-temp_lat": {
       "fskey": [
         "S_oc-temp_lat"
@@ -893,15 +1019,33 @@
       ],
       "isAbout": null
     },
+    "S_oc-temp_med_and_Lingual": {
+      "fskey": [
+        "S_oc-temp_med_and_Lingual"
+      ],
+      "isAbout": null
+    },
     "S_oc_middle&Lunatus": {
       "fskey": [
         "S_oc_middle&Lunatus"
       ],
       "isAbout": null
     },
+    "S_oc_middle_and_Lunatus": {
+      "fskey": [
+        "S_oc_middle_and_Lunatus"
+      ],
+      "isAbout": null
+    },
     "S_oc_sup&transversal": {
       "fskey": [
         "S_oc_sup&transversal"
+      ],
+      "isAbout": null
+    },
+    "S_oc_sup_and_transversal": {
+      "fskey": [
+        "S_oc_sup_and_transversal"
       ],
       "isAbout": null
     },
@@ -989,11 +1133,33 @@
       ],
       "isAbout": null
     },
+    "SegmentedTotalIntraCranialVol": {
+      "fskey": [],
+      "isAbout": null
+    },
+    "Straight-Sinus": {
+      "fskey": [
+        "Straight-Sinus"
+      ],
+      "isAbout": null
+    },
     "SubCortGray": {
       "fskey": [
         "SubCortGray"
       ],
       "isAbout": "http://purl.obolibrary.org/obo/UBERON_0000955"
+    },
+    "Superior-Sinus-D": {
+      "fskey": [
+        "Superior-Sinus-D"
+      ],
+      "isAbout": null
+    },
+    "Superior-Sinus-P": {
+      "fskey": [
+        "Superior-Sinus-P"
+      ],
+      "isAbout": null
     },
     "SupraTentorial": {
       "fskey": [
@@ -1041,6 +1207,13 @@
       ],
       "isAbout": "http://purl.obolibrary.org/obo/UBERON_0005401"
     },
+    "Transverse-Sinus": {
+      "fskey": [
+        "Left-Transverse-Sinus",
+        "Right-Transverse-Sinus"
+      ],
+      "isAbout": null
+    },
     "UnsegmentedWhiteMatter": {
       "fskey": [
         "Left-UnsegmentedWhiteMatter",
@@ -1054,9 +1227,21 @@
       ],
       "isAbout": null
     },
+    "V1_exvivo.thresh": {
+      "fskey": [
+        "V1_exvivo.thresh"
+      ],
+      "isAbout": null
+    },
     "V2_exvivo": {
       "fskey": [
         "V2_exvivo"
+      ],
+      "isAbout": null
+    },
+    "V2_exvivo.thresh": {
+      "fskey": [
+        "V2_exvivo.thresh"
       ],
       "isAbout": null
     },
@@ -1121,6 +1306,12 @@
     "entoinal_exvivo": {
       "fskey": [
         "entorhinal_exvivo"
+      ],
+      "isAbout": null
+    },
+    "entoinal_exvivo.thresh": {
+      "fskey": [
+        "entorhinal_exvivo.thresh"
       ],
       "isAbout": null
     },
@@ -1237,6 +1428,12 @@
     "periinal_exvivo": {
       "fskey": [
         "perirhinal_exvivo"
+      ],
+      "isAbout": null
+    },
+    "periinal_exvivo.thresh": {
+      "fskey": [
+        "perirhinal_exvivo.thresh"
       ],
       "isAbout": null
     },
@@ -1371,6 +1568,13 @@
       "fskey": [
         "wm-lh-fusiform",
         "wm-rh-fusiform"
+      ],
+      "isAbout": null
+    },
+    "wm-gyrus-ambiens": {
+      "fskey": [
+        "wm-lh-gyrus-ambiens",
+        "wm-rh-gyrus-ambiens"
       ],
       "isAbout": null
     },

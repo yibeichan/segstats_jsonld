@@ -75,6 +75,7 @@ def read_stats(filename, error_on_new_key=True):
     header = {}
     tableinfo = {}
     measures = []
+    struct_idx = None
 
     with open(cde_file, "r") as fp:
         fs_cde = json.load(fp)
@@ -134,6 +135,8 @@ def read_stats(filename, error_on_new_key=True):
                             "Units": "unknown",
                             "FieldName": fieldname,
                         }
+                        if fieldname == "StructName":
+                            struct_idx = idx + 1
                 else:
                     continue
             else:
@@ -141,6 +144,11 @@ def read_stats(filename, error_on_new_key=True):
         else:
             # read values
             row = line.split()
+            if struct_idx is None:
+                raise ValueError(
+                    f"No StructName column found in {filename}. "
+                    "Cannot process data rows without structure information."
+                )
             segid = None
             hemi = None
             if "lh." in str(filename) or "Left" in row[struct_idx - 1]:
