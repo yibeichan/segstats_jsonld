@@ -168,6 +168,7 @@ def read_stats(filename, error_on_new_key=True):
             for idx, value in enumerate(row):
                 if idx + 1 == struct_idx or tableinfo[idx + 1]["ColHeader"] == "Index":
                     continue
+                # overwrite segid if SegId column found in table
                 if tableinfo[idx + 1]["ColHeader"] == "SegId":
                     segid = int(value)
                     continue
