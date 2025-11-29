@@ -71,6 +71,11 @@ def make_label(info):
 
 def read_stats(filename, error_on_new_key=True):
     """Convert stats file to a structure
+    The stats files have usually a multiple line commented header
+    followed by a table of values. The header lines start with various tags.
+    We read TableCol, Measure and ColHeaders.
+    The TableCol should describe all the columns in the table, but if not,
+    we supplement it with the ColHeaders line.
     """
     header = {}
     tableinfo = {}
@@ -126,6 +131,7 @@ def read_stats(filename, error_on_new_key=True):
                         )
                 measures.append((f'{fs_cde[str(fskey)]["id"]}', fields[3]))
             elif tag == "ColHeaders":
+                # adjust tableinfo if not everything is described in # TableCol
                 if len(fields) != len(tableinfo):
                     for idx, fieldname in enumerate(fields[1:]):
                         if idx + 1 in tableinfo:
