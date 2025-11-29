@@ -569,7 +569,7 @@ def convert_stats_to_nidm(stats):
             fs["fs_" + val[0]]: prov.model.Literal(
                 val[1],
                 datatype=prov.model.XSD["float"]
-                if "." in val[1]
+                if "." in val[1] or "nan" in val[1].lower() or "inf" in val[1].lower()
                 else prov.model.XSD["integer"],
             )
             for val in stats
