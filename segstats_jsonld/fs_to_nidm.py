@@ -606,7 +606,7 @@ def main():
     group.add_argument('-s', '--subject_dir', dest='subject_dir', type=str,
                         help='Path to Freesurfer subject directory')
     group.add_argument('-f', '--seg_file', dest='segfile', type=str,help='Path or URL to a specific Freesurfer'
-                            'stats file. Note, currently supported is aseg.stats, lh/rh.aparc.stats')
+                            'stats file. Check supported_files for list of supported stats files.')
     group.add_argument('-csv', '--csv_file', dest='csvfile', type=str, help='Path to CSV file which includes '
                             'a header row with 1 column containing subject IDs and the other columns are variables'
                             'indicating the Freesurfer-derived region measure (e.g. volume, surface area, etc.  If '
@@ -654,8 +654,14 @@ def main():
     #datapath = mapping_data.__path__._path[0] + '/'
     # changed by DBK
     datapath = mapping_data.__path__[0] + '/'
-    # WIP: For right now we're only converting aseg.stats but ultimately we'll want to do this for all stats files
-    supported_files=['aseg.stats','lh.aparc.stats','rh.aparc.stats']
+    supported_files=[
+        'rh.BA_exvivo.stats', 'rh.aparc.pial.stats', 'lh.aparc.pial.stats',
+        'rh.aparc.DKTatlas.stats', 'lh.aparc.stats', 'brainvol.stats', 'rh.aparc.a2009s.stats',
+        'rh.aparc.stats', 'lh.w-g.pct.stats', 'lh.aparc.a2009s.stats', 'lh.BA_exvivo.stats',
+        'lh.BA_exvivo.thresh.stats', 'rh.w-g.pct.stats', 'rh.BA_exvivo.thresh.stats',
+        'entowm.stats', 'vsinus.stats', 'lh.aparc.DKTatlas.stats', 'wmparc.stats', 'aseg.stats'
+    ]
+
 
     # if we set -s or --subject_dir as parameter on command line...
     if args.subject_dir is not None:
@@ -666,6 +672,7 @@ def main():
         subjid = os.path.basename(args.subject_dir)
         for stats_file in glob.glob(os.path.join(args.subject_dir,"stats","*.stats")):
             if basename(stats_file) in supported_files:
+                print("Processing stats file: %s" %stats_file)
                 #read in stats file
                 [measures, header] = read_stats(stats_file)
                 [e, doc] = convert_stats_to_nidm(measures)
