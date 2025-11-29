@@ -2,5 +2,3 @@ pynidm
 pandas
 prov
 xlrd
-rdflib>=6.0.0
-rdflib-jsonld>=0.6.0
