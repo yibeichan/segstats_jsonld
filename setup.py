@@ -46,8 +46,8 @@ setup(
         "pandas",
         "prov",
         "xlrd",
-        "neurdflib",
-	"neurdflib-jsonld"
+        "rdflib>=6.0.0",
+        "rdflib-jsonld>=0.6.0"
     ],  # Add requirements as necessary
     include_package_data=True,
     extras_require={
