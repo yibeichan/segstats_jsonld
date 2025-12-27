@@ -1,4 +1,4 @@
-pynidm
+pynidm==4.2.4
 pandas
 prov
 xlrd
