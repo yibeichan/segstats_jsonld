@@ -42,7 +42,10 @@ setup(
     url="https://github.com/dbkeator/segstats_jsonld",
     packages=PACKAGES,
     install_requires=[
-        "pynidm",
+        # Pinned to match the app's requirements.txt. PyNIDM 5.0 removes
+        # nidm.core and nidm.experiment, which this converter imports, so an
+        # unpinned install would break once 5.0 is on PyPI.
+        "pynidm==4.5.0",
         "pandas",
         "prov",
         "xlrd",
