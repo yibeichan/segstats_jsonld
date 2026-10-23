@@ -11,7 +11,12 @@ except ``NIDM_SUBJECTID``: a prov QualifiedName in 4.x and a URIRef in 5.
 and local name either way, so callers never touch ``.uri``/``.localpart``.
 """
 
-try:
+import importlib.util
+
+# Chosen by which package is installed, not by catching ImportError: an
+# import error inside an installed PyNIDM 5 must surface as itself, not as a
+# misleading "No module named 'nidm.core'" from the 4.x fallback.
+if importlib.util.find_spec("nidm.linkml") is not None:
     from nidm.linkml.core import constants as _constants
     from nidm.linkml.core import namespaces as _namespaces
     from nidm.linkml.core.constants import DD
@@ -31,7 +36,7 @@ try:
     Constants = _Constants()
     NIDM_SUBJECTID_URI = str(Constants.NIDM_SUBJECTID)
     PYNIDM_MAJOR = 5
-except ImportError:
+else:
     from nidm.core import Constants
     from nidm.core.Constants import DD
     from nidm.experiment.Core import getUUID
