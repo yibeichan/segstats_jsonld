@@ -35,10 +35,15 @@
 #**************************************************************************************
 
 
-from nidm.core import Constants
-from nidm.experiment.Core import getUUID
-from nidm.core.Constants import DD
-from nidm.experiment.Utils import DD_to_nidm, tupleKeysToSimpleKeys
+from segstats_jsonld._pynidm import (
+    DD,
+    NIDM_SUBJECTID_LOCALPART,
+    NIDM_SUBJECTID_URI,
+    Constants,
+    DD_to_nidm,
+    getUUID,
+    tupleKeysToSimpleKeys,
+)
 
 
 # standard library
@@ -245,8 +250,8 @@ def map_csv_variables_to_freesurfer_cdes(df,id_field,outdir,csv_file,json_map=No
         variable_to_freesurfer_cde[current_tuple]['description'] = "subject/participant identifier"
         variable_to_freesurfer_cde[current_tuple]['valueType'] = URIRef(Constants.XSD["string"])
         variable_to_freesurfer_cde[current_tuple]['isAbout'] = {}
-        variable_to_freesurfer_cde[current_tuple]['isAbout']['url'] = Constants.NIDM_SUBJECTID.uri
-        variable_to_freesurfer_cde[current_tuple]['isAbout']['label'] = Constants.NIDM_SUBJECTID.localpart
+        variable_to_freesurfer_cde[current_tuple]['isAbout']['url'] = NIDM_SUBJECTID_URI
+        variable_to_freesurfer_cde[current_tuple]['isAbout']['label'] = NIDM_SUBJECTID_LOCALPART
 
         # loop through variables in CSV
         for column in df.columns:
@@ -537,7 +542,7 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, t1_images=None, t2
                     print('Explicitly creating agent in existing NIDM file...')
                     participant_agent = niiri[getUUID()]
                     nidmdoc.add((participant_agent,RDF.type,Constants.PROV['Agent']))
-                    nidmdoc.add((participant_agent,URIRef(Constants.NIDM_SUBJECTID.uri),Literal(subjid, datatype=XSD.string)))
+                    nidmdoc.add((participant_agent,URIRef(NIDM_SUBJECTID_URI),Literal(subjid, datatype=XSD.string)))
                 elif (forceagent is False) and (len(qres)==0) and (len(qres2)==0):
                     print('Not explicitly adding agent to NIDM file, no output written')
                     exit()
@@ -982,7 +987,7 @@ def main():
                     break
                 for subkey,subvalue in json_map[key].items():
                     if subkey == 'isAbout':
-                        if json_map[key][subkey]['url'] == Constants.NIDM_SUBJECTID.uri:
+                        if json_map[key][subkey]['url'] == NIDM_SUBJECTID_URI:
                             id_field = key.split("variable")[1].split("=")[1].split(")")[0].lstrip(
                             "'").rstrip("'")
                             stop_loops = True
