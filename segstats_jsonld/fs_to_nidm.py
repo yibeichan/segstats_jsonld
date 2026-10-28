@@ -340,7 +340,46 @@ def url_validator(url):
     except:
         return False
 
-def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, t1_images=None, t2_images=None, add_to_nidm=False, forceagent=False, description=None):
+def select_acquisition(rows, acq_filenames, subjid):
+    '''
+    Pick the anatomical AcquisitionObjects the stats were computed from.
+
+    :param rows: query results with .acqObj and .filename (the input's nfo:filename)
+    :param acq_filenames: file names of the images FreeSurfer used (recon-all
+        averages repeated runs), or None
+    :param subjid: subject identifier, for messages
+    :return: list of AcquisitionObjects to link; empty to leave the stats unlinked
+
+    A subject can have several anatomical acquisitions (sessions, runs, acq-
+    variants). With acq_filenames, each name must match exactly one acquisition,
+    and all of them are linked. Without it, a single candidate is linked. Anything
+    else is left unlinked with a warning rather than linked to a guess.
+    '''
+    if not acq_filenames:
+        candidates = sorted({r.acqObj for r in rows})
+        if len(candidates) == 1:
+            return candidates
+        if not candidates:
+            warnings.warn(f"No anatomical AcquisitionObject found for subject {subjid}; "
+                          f"the stats are not linked to an acquisition")
+        else:
+            warnings.warn(f"{len(candidates)} anatomical AcquisitionObjects found for subject {subjid}; "
+                          f"the stats are not linked to an acquisition (-acq_filename names the ones used)")
+        return []
+    chosen = []
+    for name in acq_filenames:
+        want = os.path.basename(name)
+        matches = sorted({r.acqObj for r in rows
+                          if r.filename is not None and str(r.filename).split('/')[-1] == want})
+        if len(matches) != 1:
+            warnings.warn(f"{len(matches)} anatomical AcquisitionObjects with file name {want} found for "
+                          f"subject {subjid}; the stats are not linked to an acquisition")
+            return []
+        chosen.append(matches[0])
+    return sorted(set(chosen))
+
+
+def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, t1_images=None, t2_images=None, add_to_nidm=False, forceagent=False, description=None, acq_filename=None):
     '''
     WIP: this function creates a NIDM file of brain volume data and if user supplied a NIDM-E file it will add brain volumes to the
     NIDM-E file for the matching subject ID
@@ -353,6 +392,8 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, t1_images=None, t2
     :param add_to_nidm:
     :param forceagent:
     :param description:
+    :param acq_filename: file names of the anatomical images the stats came from, used to
+        pick their AcquisitionObjects in the input NIDM (see select_acquisition)
     :return:
     '''
 
@@ -535,6 +576,8 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, t1_images=None, t2
                 #######################################################################################
                 if (forceagent is not False) and (len(qres2)==0):
                     print('Explicitly creating agent in existing NIDM file...')
+                    warnings.warn(f"Subject ID {subjid} not found in the input NIDM; the stats are attached "
+                                  f"to a new agent with that ID (--forcenidm)")
                     participant_agent = niiri[getUUID()]
                     nidmdoc.add((participant_agent,RDF.type,Constants.PROV['Agent']))
                     nidmdoc.add((participant_agent,URIRef(Constants.NIDM_SUBJECTID.uri),Literal(subjid, datatype=XSD.string)))
@@ -552,27 +595,19 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, t1_images=None, t2
                 """
                 PREFIX prov:  <http://www.w3.org/ns/prov#>
                 PREFIX nidm:  <http://purl.org/nidash/nidm#>
-                PREFIX sio:   <http://semanticscience.org/resource/>
                 PREFIX nfo:   <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
-                SELECT DISTINCT ?acqObj
+                SELECT DISTINCT ?acqObj ?filename
                 WHERE {
                     ?acqObj a nidm:AcquisitionObject ;
                     prov:wasGeneratedBy/prov:qualifiedAssociation/prov:agent ?subject ;
                     nidm:hadAcquisitionModality nidm:MagneticResonanceImaging ;
-                    nidm:hadImageUsageType nidm:Anatomical
+                    nidm:hadImageUsageType nidm:Anatomical .
+                    OPTIONAL { ?acqObj nfo:filename ?filename }
                 }
                 """
             )
             res = list(nidmdoc.query(query_acq, initBindings={"subject": participant_agent}))
-            if not res:
-                warnings.warn(f"No T1-weighted AcquisitionObject found for subject {subjid}")
-                acq_obj = None
-            elif len(res) > 1:
-                raise RuntimeError(f"Expected exactly 1 AcquisitionObject, found {len(res)}")
-            else:
-                acq_obj = res[0].acqObj
-
-            if acq_obj:
+            for acq_obj in select_acquisition(res, acq_filename, subjid):
                 nidmdoc.add((software_activity, Constants.PROV['used'], acq_obj))
 
     #create a blank node and qualified association with prov:Agent for participant
@@ -693,9 +728,9 @@ def main():
                             'program will end up being interactive.  In future WIP we will add the ability to export'
                             'a json sidecar file with those mappings for automated runs of future CSV files with the '
                             'same set of variables.')
-    parser.add_argument('-subjid','--subjid',dest='subjid',required=False, help='If a path to a URL or a stats file'
-                            'is supplied via the -f/--seg_file parameters then -subjid parameter must be set with'
-                            'the subject identifier to be used in the NIDM files')
+    parser.add_argument('-subjid','--subjid',dest='subjid',required=False, help='Subject identifier to be used in '
+                            'the NIDM files. Required with -f/--seg_file. With -s/--subject_dir it defaults to the '
+                            'name of the subject directory; set it when that directory is not named after the subject')
     group2.add_argument('-o', '--output', dest='output_dir', type=str,
                         help='Output filename with full path', required=False, default=None)
     parser.add_argument('-j', '--jsonld', dest='jsonld', action='store_true', default = False,
@@ -715,6 +750,12 @@ def main():
                              'this argument is ignored')
     parser.add_argument('--t1', dest='t1_images', type=str, nargs='+', help='List of paths to T1 images used for segmentation')
     parser.add_argument('--t2', dest='t2_images', type=str, nargs='+', help='List of paths to T2 images used for segmentation')
+    parser.add_argument('-acq_filename', '--acq_filename', dest='acq_filename', nargs='+', required=False, default=None,
+                        help='With -s or -f and -n: file names (or paths) of the anatomical images the stats were '
+                             'computed from (several for repeated runs). The stats are linked to the input NIDM '
+                             'acquisitions with those file names if each name matches exactly one of the subject\'s '
+                             'anatomical acquisitions, and left unlinked otherwise. Without it the stats are linked '
+                             'only when the subject has a single anatomical acquisition')
     args = parser.parse_args()
 
 
@@ -748,8 +789,9 @@ def main():
         # get the freesurfer version for later use
         freesurfer_version = read_buildstamp(args.subject_dir)
         # files=['aseg.stats']
-        # get subject id from args.subject_dir
-        subjid = os.path.basename(args.subject_dir)
+        # -subjid names the subject when the directory is not named after it
+        # (e.g. <out>/sub-<id>/freesurfer); otherwise use the directory name
+        subjid = args.subjid if args.subjid else os.path.basename(os.path.normpath(args.subject_dir))
         for stats_file in glob.glob(os.path.join(args.subject_dir,"stats","*.stats")):
             if basename(stats_file) in supported_files:
                 print("Processing stats file: %s" %stats_file)
@@ -776,7 +818,7 @@ def main():
 
                     # WIP: more thought needed for version that works with adding to existing NIDM file versus creating a new NIDM file....
                     add_seg_data(nidmdoc=nidmdoc,header=header,subjid=subjid,fs_stats_entity_id=e.identifier, 
-                                t1_images=args.t1_images, t2_images=args.t2_images)
+                                t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename)
 
                     #serialize NIDM file
                     if args.jsonld is not False:
@@ -814,10 +856,10 @@ def main():
 
                     if args.forcenidm is not False:
                         add_seg_data(nidmdoc=nidmdoc,header=header,subjid=subjid,fs_stats_entity_id=e.identifier, 
-                                    t1_images=args.t1_images, t2_images=args.t2_images, add_to_nidm=True, forceagent=True)
+                                    t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, add_to_nidm=True, forceagent=True)
                     else:
                         add_seg_data(nidmdoc=nidmdoc,header=header,subjid=subjid,fs_stats_entity_id=e.identifier, 
-                                    t1_images=args.t1_images, t2_images=args.t2_images, add_to_nidm=True)
+                                    t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, add_to_nidm=True)
 
 
                     #serialize NIDM file
@@ -907,7 +949,7 @@ def main():
                 nidmdoc = g2
 
             add_seg_data(nidmdoc=nidmdoc,header=header,subjid=args.subjid,fs_stats_entity_id=e.identifier, 
-                        t1_images=args.t1_images, t2_images=args.t2_images)
+                        t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename)
 
 
             #serialize NIDM file
@@ -943,10 +985,10 @@ def main():
 
             if args.forcenidm is not False:
                 add_seg_data(nidmdoc=nidmdoc,header=header,subjid=args.subjid,fs_stats_entity_id=e.identifier, 
-                            t1_images=args.t1_images, t2_images=args.t2_images, add_to_nidm=True, forceagent=True)
+                            t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, add_to_nidm=True, forceagent=True)
             else:
                 add_seg_data(nidmdoc=nidmdoc,header=header,subjid=args.subjid,fs_stats_entity_id=e.identifier, 
-                            t1_images=args.t1_images, t2_images=args.t2_images, add_to_nidm=True)
+                            t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, add_to_nidm=True)
 
 
             #serialize NIDM file
@@ -1080,7 +1122,7 @@ def main():
                     nidmdoc = nidmdoc + g2 + pde
 
                 add_seg_data(nidmdoc=nidmdoc, header=provenance, subjid=subjid, fs_stats_entity_id=e.identifier, 
-                            t1_images=args.t1_images, t2_images=args.t2_images, description=provenance['description'])
+                            t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, description=provenance['description'])
 
                 first_row = False
             # then we can continue to iterate over the rows in the CSV file, adding to the nidmdoc graph
@@ -1096,7 +1138,7 @@ def main():
                 nidmdoc = nidmdoc + g2
 
                 add_seg_data(nidmdoc=nidmdoc, header=provenance, subjid=subjid, fs_stats_entity_id=e.identifier, 
-                            t1_images=args.t1_images, t2_images=args.t2_images, description=provenance['description'])
+                            t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, description=provenance['description'])
 
             # we adding these data to an existing NIDM file
             elif (nidm_file is not None) and (first_row):
@@ -1116,10 +1158,10 @@ def main():
 
                 if args.forcenidm is not False:
                     add_seg_data(nidmdoc=nidmdoc, header=provenance, subjid=subjid, fs_stats_entity_id=e.identifier, 
-                                t1_images=args.t1_images, t2_images=args.t2_images, add_to_nidm=True, forceagent=True, description=provenance['description'])
+                                t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, add_to_nidm=True, forceagent=True, description=provenance['description'])
                 else:
                     add_seg_data(nidmdoc=nidmdoc, header=provenance, subjid=subjid, fs_stats_entity_id=e.identifier, 
-                                t1_images=args.t1_images, t2_images=args.t2_images, add_to_nidm=True, description=provenance['description'])
+                                t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, add_to_nidm=True, description=provenance['description'])
 
                 first_row = False
 
@@ -1135,10 +1177,10 @@ def main():
 
                 if args.forcenidm is not False:
                     add_seg_data(nidmdoc=nidmdoc, header=provenance, subjid=subjid, fs_stats_entity_id=e.identifier, 
-                                t1_images=args.t1_images, t2_images=args.t2_images, add_to_nidm=True, forceagent=True, description=provenance['description'])
+                                t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, add_to_nidm=True, forceagent=True, description=provenance['description'])
                 else:
                     add_seg_data(nidmdoc=nidmdoc, header=provenance, subjid=subjid, fs_stats_entity_id=e.identifier, 
-                                t1_images=args.t1_images, t2_images=args.t2_images, add_to_nidm=True, description=provenance['description'])
+                                t1_images=args.t1_images, t2_images=args.t2_images, acq_filename=args.acq_filename, add_to_nidm=True, description=provenance['description'])
 
 
 

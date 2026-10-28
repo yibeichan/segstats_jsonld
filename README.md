@@ -43,7 +43,7 @@ $ pip install -e .
 
 ```
 usage: segstats2nidm [-h] (-s SUBJECT_DIR | -f SEGFILE | -csv CSVFILE) [-subjid SUBJID] [-o OUTPUT_DIR] [-j] [-add_de] [-n NIDM_FILE]
-                     [-forcenidm] [-json_map JSON_MAP]
+                     [-forcenidm] [-json_map JSON_MAP] [-acq_filename ACQ_FILENAME [ACQ_FILENAME ...]]
 
 This program will load in a aseg.stats file from Freesurfer, augment the Freesurfer anatomical region designations with common data element
 anatomical designations, and save the statistics + region designations out as NIDM serializations (i.e. TURTLE, JSON-LD RDF))
@@ -61,8 +61,8 @@ optional arguments:
                         presented to you (so this program will end up being interactive. In future WIP we will add the ability to exporta json
                         sidecar file with those mappings for automated runs of future CSV files with the same set of variables.
   -subjid SUBJID, --subjid SUBJID
-                        If a path to a URL or a stats fileis supplied via the -f/--seg_file parameters then -subjid parameter must be set
-                        withthe subject identifier to be used in the NIDM files
+                        Subject identifier to be used in the NIDM files. Required with -f/--seg_file. With -s/--subject_dir it defaults to
+                        the name of the subject directory; set it when that directory is not named after the subject
   -o OUTPUT_DIR, --output OUTPUT_DIR
                         Output filename with full path
   -j, --jsonld          If flag set then NIDM file will be written as JSONLD instead of TURTLE
@@ -76,6 +76,11 @@ optional arguments:
   -json_map JSON_MAP, --json_map JSON_MAP
                         If storing freesurfer segmentation data stored in a CSV file and you've previouslystored the variable to Freesurfer CDE
                         mappings, this can be reused. Otherwisethis argument is ignored
+  -acq_filename ACQ_FILENAME [ACQ_FILENAME ...], --acq_filename ACQ_FILENAME [ACQ_FILENAME ...]
+                        With -s or -f and -n: file names (or paths) of the anatomical images the stats were computed from (several for
+                        repeated runs). The stats are linked to the input NIDM acquisitions with those file names if each name matches
+                        exactly one of the subject's anatomical acquisitions, and left unlinked otherwise. Without it the stats are linked
+                        only when the subject has a single anatomical acquisition
 
 ```
 
