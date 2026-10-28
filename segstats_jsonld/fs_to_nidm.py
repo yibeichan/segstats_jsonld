@@ -764,6 +764,12 @@ def main():
     # know which subject the stats file is for
     if args.segfile and (args.subjid is None):
         parser.error("-f/--seg_file requires -subjid/--subjid to be set!")
+    # -acq_filename names one subject's images: with -csv it would apply to every row's
+    # subject, and without -n there is no input acquisition to link to
+    if args.acq_filename and args.csvfile:
+        parser.error("-acq_filename applies to -s/--subject_dir or -f/--seg_file, not -csv/--csv_file")
+    if args.acq_filename and not args.nidm_file:
+        parser.error("-acq_filename requires -n/--nidm")
 
     # if output_dir doesn't exist then create it
     #if args.output_dir is not None:

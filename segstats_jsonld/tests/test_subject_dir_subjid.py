@@ -121,7 +121,8 @@ def test_several_acquisitions_without_a_file_name_are_left_unlinked(tmp_path):
     g, err = run_fs_to_nidm(tmp_path, "-subjid", "sub-0051456", input_ttl=ACQ_TTL)
     assert subject_agents(g) == {SUBJECT}
     assert used_acquisitions(g) == set()
-    assert NOT_LINKED in err
+    # the query found all three; they are left unlinked because none was named
+    assert "3 anatomical AcquisitionObjects found for subject sub-0051456" in err
 
 
 def test_one_unmatched_file_name_leaves_all_unlinked(tmp_path):
@@ -129,7 +130,18 @@ def test_one_unmatched_file_name_leaves_all_unlinked(tmp_path):
                             t1w("ses-1_run-1"), t1w("ses-3_run-1"), input_ttl=ACQ_TTL)
     assert subject_agents(g) == {SUBJECT}
     assert used_acquisitions(g) == set()
+    assert "0 anatomical AcquisitionObjects with file name sub-0051456_ses-3_run-1_T1w.nii.gz" in err
     assert NOT_LINKED in err
+
+
+@pytest.mark.parametrize("args, message", [
+    (["-csv", "x.csv", "-n", "in.ttl", "-acq_filename", "a_T1w.nii.gz"], "not -csv"),
+    (["-s", "sub-01", "-o", "out", "-acq_filename", "a_T1w.nii.gz"], "requires -n"),
+])
+def test_acq_filename_is_refused_where_it_cannot_apply(tmp_path, args, message):
+    result = subprocess.run([sys.executable, "-m", "segstats_jsonld.fs_to_nidm", *args],
+                            cwd=REPO_ROOT, capture_output=True, text=True)
+    assert result.returncode == 2 and message in result.stderr, result.stderr
 
 
 class Row:
