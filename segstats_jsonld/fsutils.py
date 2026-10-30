@@ -9,7 +9,7 @@ from collections import namedtuple
 from pathlib import Path
 import rdflib as rl
 from requests import get
-from nidm.core.Constants import DD
+from segstats_jsonld._pynidm import DD
 
 
 FS = namedtuple("FS", ["structure", "hemi", "measure", "unit"])
@@ -498,7 +498,7 @@ def create_cde_graph(restrict_to=None):
     """
     with open(cde_file, "r") as fp:
         fs_cde = json.load(fp)
-    from nidm.core import Constants
+    from segstats_jsonld._pynidm import Constants
 
     fs = Constants.FREESURFER
     nidm = Constants.NIDM
@@ -554,8 +554,7 @@ def convert_stats_to_nidm(stats):
 
     Returns the entity and the prov document
     """
-    from nidm.core import Constants
-    from nidm.experiment.Core import getUUID
+    from segstats_jsonld._pynidm import Constants, getUUID
     import prov
 
     fs = prov.model.Namespace("fs", str(Constants.FREESURFER))
@@ -586,8 +585,7 @@ def convert_csv_stats_to_nidm(row, var_to_cde_mapping,filename,id_column):
     :return: Returns the entity and the prov document
     '''
 
-    from nidm.core import Constants
-    from nidm.experiment.Core import getUUID
+    from segstats_jsonld._pynidm import Constants, getUUID
     import prov
 
     fs = prov.model.Namespace("fs", str(Constants.FREESURFER))
