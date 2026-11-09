@@ -394,8 +394,16 @@ def select_acquisition(rows, acq_filenames, subjid, from_csv=False):
     return sorted(set(chosen))
 
 
-class SubjectLookupError(LookupError):
+class InputNIDMError(LookupError):
+    """The input NIDM cannot take the stats; nothing has been added to it."""
+
+
+class SubjectLookupError(InputNIDMError):
     """The subject the stats belong to cannot be identified in the input NIDM."""
+
+
+class ProjectLookupError(InputNIDMError):
+    """The input NIDM has no nidm:Project to attach the stats session to."""
 
 
 def normalise_subject_id(subject_id):
@@ -548,15 +556,42 @@ def _add_forced_subject_agent(nidmdoc, subjid, created_agents):
     return agent
 
 
+PROJECT_QUERY = """
+    prefix nidm: <http://purl.org/nidash/nidm#>
+    PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    select distinct ?project
+    where { ?project rdf:type nidm:Project . }"""
+
+
+def find_project(graph):
+    """
+    The nidm:Project of an input NIDM, which the stats session is made part of.
+    With several, the last the query returns is used, as before.
+
+    :raises ProjectLookupError: when the graph has no nidm:Project (an empty
+        file has none)
+    """
+    project = None
+    for row in graph.query(PROJECT_QUERY):
+        project = row['project']
+    if project is None:
+        raise ProjectLookupError("the input NIDM has no nidm:Project to add the FreeSurfer stats "
+                                 "to; give a NIDM file made by bidsmri2nidm, or omit -n to write "
+                                 "a new document")
+    return project
+
+
 def _check_csv_subjects(nidm_file, subject_ids, forceagent):
     """
-    Raise SubjectLookupError if any of the -csv rows' subject ids would fail the
+    Raise ProjectLookupError if the input NIDM has no project, and
+    SubjectLookupError if any of the -csv rows' subject ids would fail the
     lookup add_seg_data makes, without asking anything or writing anything. Runs
     the same lookup, in row order, on a throwaway copy of the input NIDM, adding
     the agents --forcenidm would add as it goes.
     """
     graph = Graph()
     graph.parse(nidm_file, format=util.guess_format(nidm_file))
+    find_project(graph)
     created = set()
     with contextlib.redirect_stdout(StringIO()), warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -597,9 +632,10 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, add_to_nidm=False,
     nidm = Namespace(Constants.NIDM)
     nidmdoc.bind("nidm",nidm)
 
-    # identify the input subject before anything is added, so a lookup that
-    # fails leaves the graph as it was
+    # identify the input project and subject before anything is added, so a
+    # lookup that fails leaves the graph as it was
     if add_to_nidm:
+        project_activity = find_project(nidmdoc)
         if created_agents is None:
             created_agents = set()
         participant_agent = find_subject(nidmdoc, subjid, forceagent, created_agents)
@@ -667,25 +703,8 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, add_to_nidm=False,
     # add association between FSStatsCollection and computation activity
     nidmdoc.add((URIRef(fs_stats_entity_id.uri),Constants.PROV['wasGeneratedBy'],software_activity))
 
-    if add_to_nidm:
-        # get project uuid from NIDM doc and make association with software_activity
-        query = """
-                                    prefix nidm: <http://purl.org/nidash/nidm#>
-                                    PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-    
-                                    select distinct ?project
-                                    where {
-    
-                                        ?project rdf:type nidm:Project .
-    
-                                    }"""
-
-        qres = nidmdoc.query(query)
-        for row in qres:
-            project_activity = row['project']
-            #nidmdoc.add((software_activity, Constants.DCT["isPartOf"], row['project']))
-
-    else:
+    if not add_to_nidm:
+        # a new document: the input's project was found before anything was added
         project_activity = niiri[getUUID()]
         nidmdoc.add((project_activity, RDF.type, Constants.NIDM['Project']))
 
@@ -835,6 +854,9 @@ def main():
 
     try:
         _convert(args)
+    except ProjectLookupError as err:
+        # nothing has been written when the lookup fails
+        sys.exit("fs_to_nidm.py: error: %s: %s" % (args.nidm_file, err))
     except SubjectLookupError as err:
         # nothing has been written when the lookup fails
         sys.exit("fs_to_nidm.py: error: %s" % err)
