@@ -91,8 +91,8 @@ options:
                         Existing NIDM file to add the stats to; it is rewritten in place (with -j
                         the result goes to <NIDM_FILE>.json instead). It must contain a
                         nidm:Project, which the stats session is made part of; a file without one
-                        (an empty file included) is refused and left unchanged. Exactly one of
-                        -o/--output and -n/--nidm is required
+                        (an empty Turtle file included) is refused and left unchanged. Exactly one
+                        of -o/--output and -n/--nidm is required
   -j, --jsonld          If flag set then NIDM file will be written as JSONLD instead of TURTLE.
                         With -n the JSON-LD goes to <NIDM_FILE>.json. Not allowed with -s and -n
                         together

@@ -807,8 +807,8 @@ def main():
     group2.add_argument('-n','--nidm', dest='nidm_file', type=str, required=False,default=None,
                         help='Existing NIDM file to add the stats to; it is rewritten in place (with -j the '
                              'result goes to <NIDM_FILE>.json instead). It must contain a nidm:Project, '
-                             'which the stats session is made part of; a file without one (an empty file '
-                             'included) is refused and left unchanged. Exactly one of -o/--output and '
+                             'which the stats session is made part of; a file without one (an empty Turtle '
+                             'file included) is refused and left unchanged. Exactly one of -o/--output and '
                              '-n/--nidm is required')
     parser.add_argument('-j', '--jsonld', dest='jsonld', action='store_true', default = False,
                         help='If flag set then NIDM file will be written as JSONLD instead of TURTLE. With -n '
