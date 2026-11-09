@@ -89,8 +89,10 @@ options:
                         file. Exactly one of -o/--output and -n/--nidm is required
   -n NIDM_FILE, --nidm NIDM_FILE
                         Existing NIDM file to add the stats to; it is rewritten in place (with -j
-                        the result goes to <NIDM_FILE>.json instead). Exactly one of -o/--output
-                        and -n/--nidm is required
+                        the result goes to <NIDM_FILE>.json instead). It must contain a
+                        nidm:Project, which the stats session is made part of; a file without one
+                        (an empty file included) is refused and left unchanged. Exactly one of
+                        -o/--output and -n/--nidm is required
   -j, --jsonld          If flag set then NIDM file will be written as JSONLD instead of TURTLE.
                         With -n the JSON-LD goes to <NIDM_FILE>.json. Not allowed with -s and -n
                         together
@@ -98,10 +100,10 @@ options:
                         else it is written to a separate file, fs_cde.ttl, in the output directory
                         (or the directory of the -n NIDM file)
   -forcenidm, --forcenidm
-                        With -n: if the NIDM file has no subjects at all, add a new subject agent
-                        with the subject ID and attach the stats to it. If the file has subjects
-                        and none matches the subject ID (compared without a leading "sub-" and
-                        leading zeros), the run fails with or without this option
+                        With -n: if the NIDM file has a nidm:Project but no subjects, add a new
+                        subject agent with the subject ID and attach the stats to it. If the file
+                        has subjects and none matches the subject ID (compared without a leading
+                        "sub-" and leading zeros), the run fails with or without this option
   -json_map JSON_MAP, --json_map JSON_MAP
                         If storing freesurfer segmentation data stored in a CSV file and you've
                         previously stored the variable to Freesurfer CDE mappings, this can be

@@ -88,6 +88,24 @@ def test_cli_refuses_an_input_without_a_project_and_writes_nothing(tmp_path, con
     assert set(tmp_path.rglob("*")) == files_before
 
 
+def test_cli_csv_refuses_an_input_without_a_project_before_any_question(tmp_path):
+    """Without -json_map, -csv asks for the subject ID column first; an input
+    with no project is refused before that question."""
+    csv = tmp_path / "volumes.csv"
+    csv.write_text("subject,Left-Hippocampus\n51456,4000\n")
+    nidm = tmp_path / "nidm.ttl"
+    nidm.write_text(SUBJECT_ONLY_TTL)
+    before = md5(nidm)
+
+    result = run("-csv", str(csv), "-n", str(nidm))
+
+    assert result.returncode != 0
+    assert "nidm:Project" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert "Please select" not in result.stdout
+    assert md5(nidm) == before
+
+
 def test_csv_pre_check_refuses_an_input_without_a_project(tmp_path):
     nidm = tmp_path / "nidm.ttl"
     nidm.write_text(SUBJECT_ONLY_TTL)

@@ -616,6 +616,7 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, add_to_nidm=False,
     :param created_agents: set of subject agents created by earlier calls in the same run
         (see find_subject); updated in place
     :return:
+    :raises ProjectLookupError: with add_to_nidm, when nidmdoc has no nidm:Project
     :raises SubjectLookupError: with add_to_nidm, when the subject cannot be identified
     '''
 
@@ -805,7 +806,9 @@ def main():
                              'Exactly one of -o/--output and -n/--nidm is required')
     group2.add_argument('-n','--nidm', dest='nidm_file', type=str, required=False,default=None,
                         help='Existing NIDM file to add the stats to; it is rewritten in place (with -j the '
-                             'result goes to <NIDM_FILE>.json instead). Exactly one of -o/--output and '
+                             'result goes to <NIDM_FILE>.json instead). It must contain a nidm:Project, '
+                             'which the stats session is made part of; a file without one (an empty file '
+                             'included) is refused and left unchanged. Exactly one of -o/--output and '
                              '-n/--nidm is required')
     parser.add_argument('-j', '--jsonld', dest='jsonld', action='store_true', default = False,
                         help='If flag set then NIDM file will be written as JSONLD instead of TURTLE. With -n '
@@ -815,7 +818,7 @@ def main():
                              'written to a separate file, fs_cde.ttl, in the output directory (or the directory '
                              'of the -n NIDM file)')
     parser.add_argument('-forcenidm','--forcenidm', action='store_true',required=False,
-                        help='With -n: if the NIDM file has no subjects at all, add a new subject agent with the '
+                        help='With -n: if the NIDM file has a nidm:Project but no subjects, add a new subject agent with the '
                              'subject ID and attach the stats to it. If the file has subjects and none matches the '
                              'subject ID (compared without a leading "sub-" and leading zeros), the run fails '
                              'with or without this option')
@@ -1114,6 +1117,13 @@ def _convert(args):
         # interactions with the user...
         
         # step 1: read CSV file and get header row
+        # an input NIDM without a project is refused before any question
+        if args.nidm_file is not None:
+            input_graph = Graph()
+            input_graph.parse(args.nidm_file, format=util.guess_format(args.nidm_file))
+            find_project(input_graph)
+            del input_graph
+
         print("---------------------------------------------------------------------------------------")
         print("Loading CSV file....")
         df = pd.read_csv(args.csvfile)
