@@ -136,6 +136,13 @@ options:
   subject_id, forceagent=False, created_agents=())`, which returns the subject node (or `None` for a
   file without subjects under `forceagent`), raises `SubjectLookupError` otherwise, and never changes
   the graph; `ants_seg_to_nidm` has the same function with the same rules.
+- With `-n`, a NIDM file without a `nidm:Project` is refused (exit 1) with a message naming the
+  file, and is left unchanged; earlier releases did not check for one and failed with
+  `UnboundLocalError` once the subject had been found or added. The stats session is made part of
+  the project `segstats_jsonld.fs_to_nidm.find_project(graph)` returns; it raises
+  `ProjectLookupError` when the graph has none. `ProjectLookupError` and `SubjectLookupError` are
+  both `InputNIDMError` (a `LookupError`), for callers that handle both. If the file has several
+  projects, which one the session joins is not defined.
 - `-s` with no supported stats file in its `stats/` directory fails (exit 1) with a message naming
   the directory and the files looked for; earlier releases exited 0 without writing anything.
 - `-j` with both `-s` and `-n` is refused with a message naming the alternatives (earlier releases

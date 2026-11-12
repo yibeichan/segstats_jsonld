@@ -19,7 +19,7 @@ from segstats_jsonld.fs_to_nidm import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "segstats_jsonld" / "tests"))
-from test_cli_options import make_subject_dir, run  # noqa: E402
+from test_cli_options import INPUT_TTL, make_subject_dir, run  # noqa: E402
 
 STATS = SimpleNamespace(uri="http://example.org/entity/fsstats")
 
@@ -44,6 +44,12 @@ def md5(path):
     return hashlib.md5(path.read_bytes()).hexdigest()
 
 
+def session_projects(graph):
+    """For each nidm:Session in graph, the set of nodes it is dct:isPartOf."""
+    return [set(graph.objects(session, Constants.DCT["isPartOf"]))
+            for session in graph.subjects(RDF.type, Constants.NIDM["Session"])]
+
+
 def test_both_lookup_errors_are_input_nidm_errors():
     assert issubclass(ProjectLookupError, InputNIDMError)
     assert issubclass(SubjectLookupError, InputNIDMError)
@@ -66,7 +72,36 @@ def test_a_new_document_still_gets_its_own_project():
     """Without an input NIDM (add_to_nidm=False) the converter makes the project."""
     graph = Graph()
     add_seg_data(graph, {"version": "7.4.1"}, "sub-0050002", STATS)
-    assert len(set(graph.subjects(RDF.type, Constants.NIDM["Project"]))) == 1
+    projects = set(graph.subjects(RDF.type, Constants.NIDM["Project"]))
+    assert len(projects) == 1
+    assert session_projects(graph) == [projects]
+
+
+def test_add_seg_data_makes_the_session_part_of_the_input_project():
+    graph = _subject_only_graph()
+    project = URIRef("http://example.org/project")
+    graph.add((project, RDF.type, Constants.NIDM["Project"]))
+
+    add_seg_data(graph, {"version": "7.4.1"}, "sub-0050002", STATS, add_to_nidm=True)
+
+    assert session_projects(graph) == [{project}]
+    assert set(graph.subjects(RDF.type, Constants.NIDM["Project"])) == {project}
+
+
+def test_cli_makes_every_session_part_of_the_input_project(tmp_path):
+    """-s -n adds one session per stats file; each joins the project the input
+    already has, and no second project appears."""
+    subject_dir = make_subject_dir(tmp_path)
+    nidm = tmp_path / "nidm.ttl"
+    nidm.write_text(INPUT_TTL)
+
+    result = run("-s", str(subject_dir), "-n", str(nidm))
+
+    assert result.returncode == 0, result.stderr
+    graph = Graph().parse(str(nidm), format="turtle")
+    project = URIRef("http://iri.nidash.org/project")
+    assert session_projects(graph) == [{project}, {project}]
+    assert set(graph.subjects(RDF.type, Constants.NIDM["Project"])) == {project}
 
 
 @pytest.mark.parametrize("content", [SUBJECT_ONLY_TTL, ""], ids=["subject-without-project", "empty"])

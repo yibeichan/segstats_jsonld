@@ -566,7 +566,9 @@ PROJECT_QUERY = """
 def find_project(graph):
     """
     The nidm:Project of an input NIDM, which the stats session is made part of.
-    With several, the last the query returns is used, as before.
+    With several, the last the query returns is used, as before; the order of
+    the query's rows is not defined, so which project that is can differ
+    between runs.
 
     :raises ProjectLookupError: when the graph has no nidm:Project (an empty
         file has none)
