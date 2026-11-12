@@ -394,8 +394,16 @@ def select_acquisition(rows, acq_filenames, subjid, from_csv=False):
     return sorted(set(chosen))
 
 
-class SubjectLookupError(LookupError):
+class InputNIDMError(LookupError):
+    """The input NIDM cannot take the stats; nothing has been added to it."""
+
+
+class SubjectLookupError(InputNIDMError):
     """The subject the stats belong to cannot be identified in the input NIDM."""
+
+
+class ProjectLookupError(InputNIDMError):
+    """The input NIDM has no nidm:Project to attach the stats session to."""
 
 
 def normalise_subject_id(subject_id):
@@ -548,15 +556,44 @@ def _add_forced_subject_agent(nidmdoc, subjid, created_agents):
     return agent
 
 
+PROJECT_QUERY = """
+    prefix nidm: <http://purl.org/nidash/nidm#>
+    PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    select distinct ?project
+    where { ?project rdf:type nidm:Project . }"""
+
+
+def find_project(graph):
+    """
+    The nidm:Project of an input NIDM, which the stats session is made part of.
+    With several, the last the query returns is used, as before; the order of
+    the query's rows is not defined, so which project that is can differ
+    between runs.
+
+    :raises ProjectLookupError: when the graph has no nidm:Project (an empty
+        file has none)
+    """
+    project = None
+    for row in graph.query(PROJECT_QUERY):
+        project = row['project']
+    if project is None:
+        raise ProjectLookupError("the input NIDM has no nidm:Project to add the FreeSurfer stats "
+                                 "to; give a NIDM file made by bidsmri2nidm, or omit -n to write "
+                                 "a new document")
+    return project
+
+
 def _check_csv_subjects(nidm_file, subject_ids, forceagent):
     """
-    Raise SubjectLookupError if any of the -csv rows' subject ids would fail the
+    Raise ProjectLookupError if the input NIDM has no project, and
+    SubjectLookupError if any of the -csv rows' subject ids would fail the
     lookup add_seg_data makes, without asking anything or writing anything. Runs
     the same lookup, in row order, on a throwaway copy of the input NIDM, adding
     the agents --forcenidm would add as it goes.
     """
     graph = Graph()
     graph.parse(nidm_file, format=util.guess_format(nidm_file))
+    find_project(graph)
     created = set()
     with contextlib.redirect_stdout(StringIO()), warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -581,6 +618,7 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, add_to_nidm=False,
     :param created_agents: set of subject agents created by earlier calls in the same run
         (see find_subject); updated in place
     :return:
+    :raises ProjectLookupError: with add_to_nidm, when nidmdoc has no nidm:Project
     :raises SubjectLookupError: with add_to_nidm, when the subject cannot be identified
     '''
 
@@ -597,9 +635,10 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, add_to_nidm=False,
     nidm = Namespace(Constants.NIDM)
     nidmdoc.bind("nidm",nidm)
 
-    # identify the input subject before anything is added, so a lookup that
-    # fails leaves the graph as it was
+    # identify the input project and subject before anything is added, so a
+    # lookup that fails leaves the graph as it was
     if add_to_nidm:
+        project_activity = find_project(nidmdoc)
         if created_agents is None:
             created_agents = set()
         participant_agent = find_subject(nidmdoc, subjid, forceagent, created_agents)
@@ -667,25 +706,8 @@ def add_seg_data(nidmdoc, header, subjid, fs_stats_entity_id, add_to_nidm=False,
     # add association between FSStatsCollection and computation activity
     nidmdoc.add((URIRef(fs_stats_entity_id.uri),Constants.PROV['wasGeneratedBy'],software_activity))
 
-    if add_to_nidm:
-        # get project uuid from NIDM doc and make association with software_activity
-        query = """
-                                    prefix nidm: <http://purl.org/nidash/nidm#>
-                                    PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-    
-                                    select distinct ?project
-                                    where {
-    
-                                        ?project rdf:type nidm:Project .
-    
-                                    }"""
-
-        qres = nidmdoc.query(query)
-        for row in qres:
-            project_activity = row['project']
-            #nidmdoc.add((software_activity, Constants.DCT["isPartOf"], row['project']))
-
-    else:
+    if not add_to_nidm:
+        # a new document: the input's project was found before anything was added
         project_activity = niiri[getUUID()]
         nidmdoc.add((project_activity, RDF.type, Constants.NIDM['Project']))
 
@@ -786,7 +808,9 @@ def main():
                              'Exactly one of -o/--output and -n/--nidm is required')
     group2.add_argument('-n','--nidm', dest='nidm_file', type=str, required=False,default=None,
                         help='Existing NIDM file to add the stats to; it is rewritten in place (with -j the '
-                             'result goes to <NIDM_FILE>.json instead). Exactly one of -o/--output and '
+                             'result goes to <NIDM_FILE>.json instead). It must contain a nidm:Project, '
+                             'which the stats session is made part of; a file without one (an empty Turtle '
+                             'file included) is refused and left unchanged. Exactly one of -o/--output and '
                              '-n/--nidm is required')
     parser.add_argument('-j', '--jsonld', dest='jsonld', action='store_true', default = False,
                         help='If flag set then NIDM file will be written as JSONLD instead of TURTLE. With -n '
@@ -796,7 +820,7 @@ def main():
                              'written to a separate file, fs_cde.ttl, in the output directory (or the directory '
                              'of the -n NIDM file)')
     parser.add_argument('-forcenidm','--forcenidm', action='store_true',required=False,
-                        help='With -n: if the NIDM file has no subjects at all, add a new subject agent with the '
+                        help='With -n: if the NIDM file has a nidm:Project but no subjects, add a new subject agent with the '
                              'subject ID and attach the stats to it. If the file has subjects and none matches the '
                              'subject ID (compared without a leading "sub-" and leading zeros), the run fails '
                              'with or without this option')
@@ -835,6 +859,9 @@ def main():
 
     try:
         _convert(args)
+    except ProjectLookupError as err:
+        # nothing has been written when the lookup fails
+        sys.exit("fs_to_nidm.py: error: %s: %s" % (args.nidm_file, err))
     except SubjectLookupError as err:
         # nothing has been written when the lookup fails
         sys.exit("fs_to_nidm.py: error: %s" % err)
@@ -1092,6 +1119,13 @@ def _convert(args):
         # interactions with the user...
         
         # step 1: read CSV file and get header row
+        # an input NIDM without a project is refused before any question
+        if args.nidm_file is not None:
+            input_graph = Graph()
+            input_graph.parse(args.nidm_file, format=util.guess_format(args.nidm_file))
+            find_project(input_graph)
+            del input_graph
+
         print("---------------------------------------------------------------------------------------")
         print("Loading CSV file....")
         df = pd.read_csv(args.csvfile)

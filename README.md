@@ -89,8 +89,10 @@ options:
                         file. Exactly one of -o/--output and -n/--nidm is required
   -n NIDM_FILE, --nidm NIDM_FILE
                         Existing NIDM file to add the stats to; it is rewritten in place (with -j
-                        the result goes to <NIDM_FILE>.json instead). Exactly one of -o/--output
-                        and -n/--nidm is required
+                        the result goes to <NIDM_FILE>.json instead). It must contain a
+                        nidm:Project, which the stats session is made part of; a file without one
+                        (an empty Turtle file included) is refused and left unchanged. Exactly one
+                        of -o/--output and -n/--nidm is required
   -j, --jsonld          If flag set then NIDM file will be written as JSONLD instead of TURTLE.
                         With -n the JSON-LD goes to <NIDM_FILE>.json. Not allowed with -s and -n
                         together
@@ -98,10 +100,10 @@ options:
                         else it is written to a separate file, fs_cde.ttl, in the output directory
                         (or the directory of the -n NIDM file)
   -forcenidm, --forcenidm
-                        With -n: if the NIDM file has no subjects at all, add a new subject agent
-                        with the subject ID and attach the stats to it. If the file has subjects
-                        and none matches the subject ID (compared without a leading "sub-" and
-                        leading zeros), the run fails with or without this option
+                        With -n: if the NIDM file has a nidm:Project but no subjects, add a new
+                        subject agent with the subject ID and attach the stats to it. If the file
+                        has subjects and none matches the subject ID (compared without a leading
+                        "sub-" and leading zeros), the run fails with or without this option
   -json_map JSON_MAP, --json_map JSON_MAP
                         If storing freesurfer segmentation data stored in a CSV file and you've
                         previously stored the variable to Freesurfer CDE mappings, this can be
@@ -134,6 +136,13 @@ options:
   subject_id, forceagent=False, created_agents=())`, which returns the subject node (or `None` for a
   file without subjects under `forceagent`), raises `SubjectLookupError` otherwise, and never changes
   the graph; `ants_seg_to_nidm` has the same function with the same rules.
+- With `-n`, a NIDM file without a `nidm:Project` is refused (exit 1) with a message naming the
+  file, and is left unchanged; earlier releases did not check for one and failed with
+  `UnboundLocalError` once the subject had been found or added. The stats session is made part of
+  the project `segstats_jsonld.fs_to_nidm.find_project(graph)` returns; it raises
+  `ProjectLookupError` when the graph has none. `ProjectLookupError` and `SubjectLookupError` are
+  both `InputNIDMError` (a `LookupError`), for callers that handle both. If the file has several
+  projects, which one the session joins is not defined.
 - `-s` with no supported stats file in its `stats/` directory fails (exit 1) with a message naming
   the directory and the files looked for; earlier releases exited 0 without writing anything.
 - `-j` with both `-s` and `-n` is refused with a message naming the alternatives (earlier releases
