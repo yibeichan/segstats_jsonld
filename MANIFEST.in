@@ -1,2 +1,3 @@
 include segstats_jsonld/mapping_data/*
 include segstats_jsonld/tests/testdata/*
+include conftest.py

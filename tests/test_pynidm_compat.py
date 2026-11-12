@@ -44,18 +44,34 @@ CONSTANTS = {
 NAMESPACES = sorted(set(CONSTANTS) - {"NIDM_NEUROIMAGING_ANALYSIS_SOFTWARE"})
 
 
+# The modules PyNIDM keeps its constants in, on the 4.x and 5 lines
+CONSTANT_MODULES = {
+    "nidm.core.Constants",
+    "nidm.linkml.core.constants",
+    "nidm.linkml.core.namespaces",
+}
+# Names the shim imports from them that are functions, not terms
+NOT_TERMS = {"DD"}
+
+
 def constants_used():
     """The Constants attributes each module of the package reads, by file name.
 
-    Only the spelling ``Constants.NAME`` is counted, so a module that renames
-    Constants on import or reads it with getattr fails here instead of
-    escaping the count.
+    Counted: ``Constants.NAME``, ``<module>.Constants.NAME``, and a name
+    imported from one of PyNIDM's constants modules (CONSTANT_MODULES). A
+    module that renames Constants on import or reads it with getattr fails
+    here. Other routes, such as passing Constants to a function or binding it
+    to another name, are not looked for.
     """
     used = {}
     for path in sorted(PACKAGE.rglob("*.py")):
         if "tests" in path.relative_to(PACKAGE).parts:
             continue
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ImportFrom) and node.module in CONSTANT_MODULES:
+                for alias in node.names:
+                    if alias.name not in NOT_TERMS:
+                        used.setdefault(path.name, set()).add(alias.name)
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 renamed = [a.asname for a in node.names
                            if a.name.split(".")[-1] == "Constants" and a.asname]
@@ -65,8 +81,10 @@ def constants_used():
                             and node.args and isinstance(node.args[0], ast.Name)
                             and node.args[0].id == "Constants")
                 assert not indirect, f"{path.name} reads Constants with getattr"
-            elif (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
-                    and node.value.id == "Constants"):
+            elif isinstance(node, ast.Attribute) and (
+                    (isinstance(node.value, ast.Name) and node.value.id == "Constants")
+                    or (isinstance(node.value, ast.Attribute)
+                        and node.value.attr == "Constants")):
                 used.setdefault(path.name, set()).add(node.attr)
     return used
 
