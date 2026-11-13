@@ -50,8 +50,13 @@ CONSTANT_MODULES = {
     "nidm.linkml.core.constants",
     "nidm.linkml.core.namespaces",
 }
-# Names the shim imports from them that are functions, not terms
+# Names the shim imports from them that are not terms (DD is a namedtuple class)
 NOT_TERMS = {"DD"}
+
+
+def _is_constants(expr):
+    return ((isinstance(expr, ast.Name) and expr.id == "Constants")
+            or (isinstance(expr, ast.Attribute) and expr.attr == "Constants"))
 
 
 def constants_used():
@@ -70,23 +75,18 @@ def constants_used():
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.ImportFrom) and node.module in CONSTANT_MODULES:
                 for alias in node.names:
-                    if alias.name not in NOT_TERMS:
-                        used.setdefault(path.name, set()).add(alias.name)
+                    used.setdefault(path.name, set()).add(alias.name)
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 renamed = [a.asname for a in node.names
                            if a.name.split(".")[-1] == "Constants" and a.asname]
                 assert not renamed, f"{path.name} imports Constants as {renamed}"
             elif isinstance(node, ast.Call):
                 indirect = (isinstance(node.func, ast.Name) and node.func.id == "getattr"
-                            and node.args and isinstance(node.args[0], ast.Name)
-                            and node.args[0].id == "Constants")
+                            and node.args and _is_constants(node.args[0]))
                 assert not indirect, f"{path.name} reads Constants with getattr"
-            elif isinstance(node, ast.Attribute) and (
-                    (isinstance(node.value, ast.Name) and node.value.id == "Constants")
-                    or (isinstance(node.value, ast.Attribute)
-                        and node.value.attr == "Constants")):
+            elif isinstance(node, ast.Attribute) and _is_constants(node.value):
                 used.setdefault(path.name, set()).add(node.attr)
-    return used
+    return {name: names - NOT_TERMS for name, names in used.items()}
 
 
 def test_the_checkout_is_the_package_under_test():
